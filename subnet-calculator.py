@@ -6,53 +6,74 @@ description: This program will calculate possible subnets
 language: python3
 author: Abhishek Inamdar (ai2363@rit.edu)
 """
+
 import sys
 
 
 class IP(object):
-    __slots__ = 'ipDec', 'ipBin', 'completeBin', 'ipStr'
+    """
+    IP object
+    """
+    __slots__ = 'ip_decimal', 'ip_binary', 'ip_binary_string', 'ip_string'
 
     def __init__(self, ip_str):
-        self.ipDec = [0] * 4
-        self.ipBin = [0] * 4
-        self.completeBin = ''
+        self.ip_decimal = [0] * 4
+        self.ip_binary = [0] * 4
+        self.ip_binary_string = ''
         if "." in ip_str:
             array = ip_str.split(".")
             i = 0
             for element in array:
-                self.ipDec[i] = int(element)
-                self.ipBin[i] = "{0:008b}".format(int(self.ipDec[i]))
-                self.completeBin += self.ipBin[i]
+                self.ip_decimal[i] = int(element)
+                self.ip_binary[i] = "{0:008b}".format(int(self.ip_decimal[i]))
+                self.ip_binary_string += self.ip_binary[i]
                 i += 1
 
-        self.ipStr = ""
+        self.ip_string = ""
         for i in range(4):
-            self.ipStr += str(self.ipDec[i]) + "."
-        self.ipStr = self.ipStr[:-1]
+            self.ip_string += str(self.ip_decimal[i]) + "."
+        self.ip_string = self.ip_string[:-1]
 
     def __str__(self):
-        string = self.ipStr
+        string = self.ip_string
         string += "\tBinary: "
-        string += self.completeBin
+        string += self.ip_binary_string
         return string
 
 
-def perform_bit_and(ip, mask):
+def perform_bitwise_and(ip, mask):
+    """
+    Performs bitwise AND operation on given two binary strings
+    :pre: length of two binary strings should be identical
+    :param ip: First binary string
+    :param mask: First binary string
+    :return: Binary string after Bitwise AND operation
+    """
     result = ""
     for i in range(len(ip)):
         result += str(int(ip[i], 2) & int(mask[i], 2))
     return result
 
 
-def get_network_bits(mask):
+def get_network_bits(mask_binary):
+    """
+    Returns number of network bits of given mask
+    :param mask_binary: Subnet Mask in binary
+    :return: Number of network bits
+    """
     count = 0
-    for i in mask:
+    for i in mask_binary:
         if int(i) == 1:
             count += 1
     return count
 
 
 def get_ip_address_from_binary_string(string):
+    """
+    returns IP object from given binary string
+    :param string: binary string of IP address
+    :return: IP object
+    """
     ipStr = ""
     for octet in (string[i:i + 8] for i in range(0, len(string), 8)):
         ipStr += str(int(octet, 2)) + "."
@@ -60,38 +81,48 @@ def get_ip_address_from_binary_string(string):
     return IP(ipStr)
 
 
-def get_broadcast_addr_binary(network_id, mask):
-    addrBin = ""
+def get_broadcast_address_binary(network_id, mask):
+    """
+    Gets binary representation of broadcast IP address
+    based on given network Id and Mask
+    :param network_id: Network Id
+    :param mask: Mask
+    :return: Broadcast address in Binary
+    """
+    address_bin = ""
     for i in range(32):
-        if int(mask.completeBin[i]) == 1:
-            addrBin += network_id.completeBin[i]
+        if int(mask.ip_binary_string[i]) == 1:
+            address_bin += network_id.ip_binary_string[i]
         else:
-            addrBin += str(1)
-    return addrBin
+            address_bin += str(1)
+    return address_bin
 
 
 class Subnet(object):
+    """
+    Subnet Object
+    """
     __slots__ = 'network_id', 'subnet_mask', 'broadcast_address', \
-                'routerLowAddr', 'routerHighAddr', \
+                'router_low_address', 'router_high_address', \
                 'network_bits', 'host_bits', \
                 'possible_hosts', 'usable_hosts'
 
     def __init__(self, network_id, subnet_mask):
         self.network_id = network_id
         self.subnet_mask = subnet_mask
-        self.network_bits = get_network_bits(subnet_mask.completeBin)
+        self.network_bits = get_network_bits(subnet_mask.ip_binary_string)
         self.host_bits = 32 - self.network_bits
 
         self.possible_hosts = pow(2, self.host_bits)
         self.usable_hosts = self.possible_hosts - 2
 
-        broadcastBin = get_broadcast_addr_binary(network_id, subnet_mask)
+        broadcastBin = get_broadcast_address_binary(network_id, subnet_mask)
         self.broadcast_address = get_ip_address_from_binary_string(broadcastBin)
 
-        networkBin = self.network_id.completeBin
+        networkBin = self.network_id.ip_binary_string
 
-        self.routerLowAddr = get_ip_address_from_binary_string(networkBin[:31] + "1")
-        self.routerHighAddr = get_ip_address_from_binary_string(broadcastBin[:31] + "0")
+        self.router_low_address = get_ip_address_from_binary_string(networkBin[:31] + "1")
+        self.router_high_address = get_ip_address_from_binary_string(broadcastBin[:31] + "0")
 
     def __str__(self):
         string = ""
@@ -104,27 +135,30 @@ class Subnet(object):
         string += "\nBroadcast Id: " + str(self.broadcast_address)
 
         string += "\nRange of usable addresses: "
-        string += "\n\tFrom: " + str(self.routerLowAddr)
-        string += "\n\tTo: " + str(self.routerHighAddr)
+        string += "\n\tFrom: " + str(self.router_low_address)
+        string += "\n\tTo: " + str(self.router_high_address)
 
         string += "\nPossible Router Addresses: "
-        string += "\n\tLow: " + str(self.routerLowAddr)
-        string += "\n\tHigh: " + str(self.routerHighAddr)
+        string += "\n\tLow: " + str(self.router_low_address)
+        string += "\n\tHigh: " + str(self.router_high_address)
         string += "\n"
         return string
 
 
 class Network(object):
+    """
+    Network Object
+    """
     __slots__ = 'ip_str', 'ip', 'ip_class', 'mask', \
                 'network_id', 'subnet'
 
     def __init__(self, ip_str):
         self.ip_str = ip_str
         self.ip = IP(ip_str)
-        if 0 <= self.ip.ipDec[0] <= 127:
+        if 0 <= self.ip.ip_decimal[0] <= 127:
             self.ip_class = 'A'
             self.mask = IP("255.0.0.0")
-        elif 128 <= self.ip.ipDec[0] <= 191:
+        elif 128 <= self.ip.ip_decimal[0] <= 191:
             self.ip_class = 'B'
             self.mask = IP("255.255.0.0")
         else:
@@ -133,20 +167,20 @@ class Network(object):
             self.mask = IP("255.255.255.0")
 
         self.network_id = get_ip_address_from_binary_string(
-            perform_bit_and(self.ip.completeBin, self.mask.completeBin))
+            perform_bitwise_and(self.ip.ip_binary_string, self.mask.ip_binary_string))
         self.subnet = Subnet(self.network_id, self.mask)
 
     def __str__(self):
         string = 'IP: ' + str(self.ip_str)
-        string += '\nSubnet Mask: ' + self.mask.ipStr
-        string += '\nNetwork Address: ' + self.network_id.ipStr
+        string += '\nSubnet Mask: ' + self.mask.ip_string
+        string += '\nNetwork Address: ' + self.network_id.ip_string
 
         string += '\nRange of Addresses'
-        string += '\n\tStart: ' + self.subnet.network_id.ipStr
-        string += '\n\tEnd: ' + self.subnet.broadcast_address.ipStr
+        string += '\n\tStart: ' + self.subnet.network_id.ip_string
+        string += '\n\tEnd: ' + self.subnet.broadcast_address.ip_string
         string += '\nPossible Router Addresses'
-        string += '\n\tLow: ' + self.subnet.routerLowAddr.ipStr
-        string += '\n\tHigh: ' + self.subnet.routerHighAddr.ipStr
+        string += '\n\tLow: ' + self.subnet.router_low_address.ip_string
+        string += '\n\tHigh: ' + self.subnet.router_high_address.ip_string
         return string
 
 
@@ -156,16 +190,26 @@ def validate_ip(string):
     :param string: string to be validated
     :return: 'valid' if string is valid IPv4 format, else invalid reason
     """
+    result = 'Not a valid value'
     if "." in string:
         array = string.split(".")
         if len(array) == 4:
             for element in array:
                 if element.isnumeric() and 0 <= int(element) <= 255:
-                    return 'valid'
-                return 'Not a valid value'
+                    result = 'valid'
+                else:
+                    result = 'Not a valid value'
+                    break
         else:
-            return 'Not a valid length'
-    return 'Not a valid format'
+            result = 'Not a valid length'
+    else:
+        result = 'Not a valid format'
+    if result == 'valid':
+        if not_supported(string) is False:
+            result = 'valid'
+        else:
+            result = 'Currently Not supported'
+    return result
 
 
 def get_ip_from_user():
@@ -201,7 +245,7 @@ def not_supported(ip):
 
 def validate_subnet_input(subnetCount, host_bits):
     if subnetCount.isnumeric() and int(subnetCount) > 0:
-        bits_required = int(subnetCount).bit_length()
+        bits_required = (int(subnetCount) - 1).bit_length()
         if bits_required < host_bits - 1:
             return 'valid'
         elif bits_required >= host_bits:
@@ -215,8 +259,8 @@ def validate_subnet_input(subnetCount, host_bits):
 def get_subnet_count(host_bits):
     """
     Prompts user and returns number of subnets required
-    :param host_bits:
-    :return:
+    :param host_bits: Original host bits
+    :return: Number of subnets required
     """
     subnetCount = input("Please enter number of subnets to be created : ")
 
@@ -268,7 +312,7 @@ def get_subnet_network_id_bin(orig_network_bin, num, orig_network_bits, bits_req
     return result_str
 
 
-def createSubnets(subnetCount, network, showSubnetCount):
+def create_subnets(subnetCount, network, showSubnetCount):
     """
     Creates Subnets
     :param subnetCount: Number of Subnets to be created total
@@ -276,8 +320,8 @@ def createSubnets(subnetCount, network, showSubnetCount):
     :param showSubnetCount: First N number of subnets to be created
     :return: Created Subnets
     """
-    bits_required = int(subnetCount).bit_length() - 1
-    orig_network_bin = network.network_id.completeBin
+    bits_required = int(subnetCount - 1).bit_length()
+    orig_network_bin = network.network_id.ip_binary_string
     orig_network_bits = network.subnet.network_bits
     new_network_bits = orig_network_bits + bits_required
     new_host_bits = 32 - new_network_bits
@@ -325,19 +369,23 @@ def print_subnet_results(bits_stolen, subnetCount, subnets):
     :param subnets: Created Subnets
     :return: None
     """
-    print("Number of bits needed to be stolen: " + str(bits_stolen))
-    print("New Subnet Mask: " + str(subnets.__getitem__(0).subnet_mask))
-    print("Number of subnets created: " + str(subnetCount))
-    print("Total Number of hosts per subnet: " + str(subnets.__getitem__(0).possible_hosts))
+    string = "\n"
+    string += "\nNumber of bits needed to be stolen: " + str(bits_stolen)
+    string += "\nNew Subnet Mask: " + str(subnets.__getitem__(0).subnet_mask)
+    string += "\nNumber of subnets created: " + str(subnetCount)
+    string += "\nTotal Number of usable hosts per subnet: " + str(subnets.__getitem__(0).usable_hosts)
+    string += "\n"
 
     subnetsSize = len(subnets)
 
     for i in range(len(subnets)):
         if i + 1 == subnetsSize:
-            print("Last Subnet:")
+            string += "\nLast Subnet:"
         else:
-            print("Subnet " + str(i + 1) + ":")
-        print(subnets.__getitem__(i))
+            string += "\nSubnet " + str(i + 1) + ":"
+        string += "\n" + str(subnets.__getitem__(i))
+
+    print(string)
 
 
 def main():
@@ -347,9 +395,6 @@ def main():
     """
     # User input
     ip = get_ip_from_user()
-    if not_supported(ip):
-        print("Currently program does not support given IP address.")
-        sys.exit("Exiting!")
 
     # Original network
     network = Network(ip)
@@ -357,11 +402,15 @@ def main():
 
     # get user input about subnet count
     subnetCount = get_subnet_count(network.subnet.host_bits)
-    bits_stolen = int(subnetCount).bit_length()
+    bits_stolen = (int(subnetCount) - 1).bit_length()
+    if bits_stolen <= 0:
+        print("No need to Subnet")
+        sys.exit("Exiting!")
+
     subnetCount = pow(2, bits_stolen)
 
     # create subnets
-    subnets = createSubnets(subnetCount, network, 5)
+    subnets = create_subnets(subnetCount, network, 5)
 
     # print results
     print_subnet_results(bits_stolen, subnetCount, subnets)
