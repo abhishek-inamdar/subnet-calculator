@@ -125,23 +125,16 @@ class Subnet(object):
         self.router_high_address = get_ip_address_from_binary_string(broadcastBin[:31] + "0")
 
     def __str__(self):
-        string = ""
-        # string += "\nPossible hosts: " + str(self.possible_hosts)
-        # string += "\nUsable hosts: " + str(self.usable_hosts)
-        string += "Subnet Range: "
-        string += "\n\tStarting Address: " + str(self.network_id)
-        string += "\n\tEnding Address: " + str(self.broadcast_address)
-        string += "\nNetwork Id: " + str(self.network_id)
-        string += "\nBroadcast Id: " + str(self.broadcast_address)
+        string = str(self.network_id.ip_string)
+        string += " - " + str(self.broadcast_address.ip_string)
+        string += "\t\t" + str(self.network_id.ip_string)
+        string += "\t\t" + str(self.broadcast_address.ip_string)
 
-        string += "\nRange of usable addresses: "
-        string += "\n\tFrom: " + str(self.router_low_address)
-        string += "\n\tTo: " + str(self.router_high_address)
+        string += "\t\t" + str(self.router_low_address.ip_string)
+        string += " - " + str(self.router_high_address.ip_string)
 
-        string += "\nPossible Router Addresses: "
-        string += "\n\tLow: " + str(self.router_low_address)
-        string += "\n\tHigh: " + str(self.router_high_address)
-        string += "\n"
+        string += "\t\t" + str(self.router_low_address.ip_string)
+        string += ", " + str(self.router_high_address.ip_string)
         return string
 
 
@@ -171,109 +164,17 @@ class Network(object):
         self.subnet = Subnet(self.network_id, self.mask)
 
     def __str__(self):
-        string = 'IP: ' + str(self.ip_str)
-        string += '\nSubnet Mask: ' + self.mask.ip_string
-        string += '\nNetwork Address: ' + self.network_id.ip_string
-
-        string += '\nRange of Addresses'
-        string += '\n\tStart: ' + self.subnet.network_id.ip_string
-        string += '\n\tEnd: ' + self.subnet.broadcast_address.ip_string
-        string += '\nPossible Router Addresses'
-        string += '\n\tLow: ' + self.subnet.router_low_address.ip_string
-        string += '\n\tHigh: ' + self.subnet.router_high_address.ip_string
+        string = 'Network of ' + str(self.ip_str)
+        string += '\nNetwork Mask\tNetwork Id\t\tDirected Broadcast' \
+                  '\t\tRange of Addresses\t\t\t\tPossible Router Addresses'
+        string += '\n' + self.mask.ip_string \
+                  + '\t' + self.network_id.ip_string \
+                  + '\t' + self.subnet.broadcast_address.ip_string \
+                  + '\t\t\t' + self.subnet.network_id.ip_string \
+                  + ' - ' + self.subnet.broadcast_address.ip_string \
+                  + '\t' + self.subnet.router_low_address.ip_string \
+                  + ', ' + self.subnet.router_high_address.ip_string
         return string
-
-
-def validate_ip(string):
-    """
-    validates given string for IPv4 IP address format
-    :param string: string to be validated
-    :return: 'valid' if string is valid IPv4 format, else invalid reason
-    """
-    result = 'Not a valid value'
-    if "." in string:
-        array = string.split(".")
-        if len(array) == 4:
-            for element in array:
-                if element.isnumeric() and 0 <= int(element) <= 255:
-                    result = 'valid'
-                else:
-                    result = 'Not a valid value'
-                    break
-        else:
-            result = 'Not a valid length'
-    else:
-        result = 'Not a valid format'
-    if result == 'valid':
-        if not_supported(string) is False:
-            result = 'valid'
-        else:
-            result = 'Currently Not supported'
-    return result
-
-
-def get_ip_from_user():
-    """
-    Prompts user to enter IP address, and validates it
-    :return: User entered IP address after validation
-    """
-    ip = input("Please enter an IP address : ")
-
-    # validation
-    is_ip_valid = validate_ip(ip)
-
-    # loop to re-prompt and re-validate
-    while is_ip_valid != 'valid':
-        print("Invalid Entry: " + is_ip_valid)
-        ip = input("Please enter an IP address ('exit' to end the program): ")
-        if ip == 'exit':
-            sys.exit("Exiting!")
-        is_ip_valid = validate_ip(ip)
-    return ip
-
-
-def not_supported(ip):
-    """
-    Checks for non supporting ip addresses
-    :pre: validate_ip(ip)
-    :param ip: ip string to be checked for support
-    :return: True if supported, False otherwise
-    """
-    array = ip.split(".")
-    return (0 <= int(array[0]) <= 223) is False
-
-
-def validate_subnet_input(subnetCount, host_bits):
-    if subnetCount.isnumeric() and int(subnetCount) > 0:
-        bits_required = (int(subnetCount) - 1).bit_length()
-        if bits_required < host_bits - 1:
-            return 'valid'
-        elif bits_required >= host_bits:
-            return 'Number of subnets is too high'
-        else:
-            return 'No usable hosts in each subnets'
-    else:
-        return 'Should be Positive Numeric value'
-
-
-def get_subnet_count(host_bits):
-    """
-    Prompts user and returns number of subnets required
-    :param host_bits: Original host bits
-    :return: Number of subnets required
-    """
-    subnetCount = input("Please enter number of subnets to be created : ")
-
-    is_valid_subnet = validate_subnet_input(subnetCount, host_bits)
-
-    # loop to re-prompt and re-validate
-    while is_valid_subnet != 'valid':
-        print("Invalid Entry: " + is_valid_subnet)
-        subnetCount = input("Please enter number of subnets to be created ('exit' to end the program): ")
-        if subnetCount == 'exit':
-            sys.exit("Exiting!")
-        is_valid_subnet = validate_subnet_input(subnetCount, host_bits)
-    return subnetCount
 
 
 def get_stolen_bits(num, bits_required):
@@ -361,31 +262,196 @@ def create_subnets(subnetCount, network, showSubnetCount):
     return subnets
 
 
-def print_subnet_results(bits_stolen, subnetCount, subnets):
+def validate_ip(string):
+    """
+    validates given string for IPv4 IP address format
+    :param string: string to be validated
+    :return: 'valid' if string is valid IPv4 format, else invalid reason
+    """
+    result = 'IP address contains invalid value'
+    if "." in string:
+        array = string.split(".")
+        if len(array) == 4:
+            for element in array:
+                if element.isnumeric() and 0 <= int(element) <= 255:
+                    result = 'valid'
+                else:
+                    result = 'IP address contains invalid value'
+                    break
+        else:
+            result = 'IP address contains invalid length'
+    else:
+        result = 'IP address contains invalid format'
+
+    if result == 'valid':
+        if not_supported(string):
+            result = 'IP address not supported'
+        else:
+            result = 'valid'
+
+    return result
+
+
+def not_supported(ip):
+    """
+    Checks for non supporting ip addresses
+    :pre: validate_ip(ip)
+    :param ip: ip string to be checked for support
+    :return: True if Not supported, False otherwise
+    """
+    array = ip.split(".")
+    return int(array[0]) <= 0 or int(array[0]) == 127 or int(array[0]) > 223
+
+
+def validate_subnet_input(subnetCount, host_bits):
+    """
+    Validates Subnet count input
+    :param subnetCount: Subnet count from user input
+    :param host_bits: Number of host bits of from the network object
+    :return: 'valid' if subnetCount is valid, Invalid reason otherwise
+    """
+    if subnetCount.isnumeric() and int(subnetCount) > 0:
+        bits_required = (int(subnetCount) - 1).bit_length()
+        if bits_required < host_bits - 1:
+            return 'valid'
+        elif bits_required >= host_bits:
+            return "'Subnets to be created value' is too high"
+        else:
+            return "There will not be any usable host in each subnet with given 'Subnets to be created value'"
+    else:
+        return 'Subnets to be created value should be Positive Numeric value'
+
+
+def get_ip_subnet_from_user():
+    """
+    Prompts user for input and returns it
+    :return: User input of IP address and Subnet Count
+    """
+    ip = input("Please enter an 'IP address' : ")
+    if ip == 'exit':
+        return ip, 0
+    subnetCount = input("Please enter number of 'Subnets to be created' : ")
+    return ip, subnetCount
+
+
+def get_user_input():
+    """
+    Prompts user for input, validates it
+    and returns network object and subnet count
+    :return: Network object and subnet count
+    """
+    (ip, subnetCount) = get_ip_subnet_from_user()
+
+    is_ip_valid = validate_ip(ip)
+    # loop to re-prompt and re-validate
+    while is_ip_valid != 'valid':
+        print("Invalid Entry: " + is_ip_valid)
+        print("Please try again! (Enter 'exit' to end the program)")
+        (ip, subnetCount) = get_ip_subnet_from_user()
+        if ip == 'exit':
+            sys.exit("Exiting!!")
+        is_ip_valid = validate_ip(ip)
+
+    # Create Network object
+    network = Network(ip)
+
+    is_valid_subnet = validate_subnet_input(subnetCount, network.subnet.host_bits)
+    # loop to re-prompt and re-validate
+    while is_valid_subnet != 'valid':
+        print("Invalid Entry: " + is_valid_subnet)
+        print("Please try again! (Enter 'exit' to end the program)")
+        (ip, subnetCount) = get_ip_subnet_from_user()
+        if ip == 'exit':
+            sys.exit("Exiting!!")
+        is_valid_subnet = validate_subnet_input(subnetCount, network.subnet.host_bits)
+
+    # return network object and subnet count
+    return network, subnetCount
+
+
+def print_subnet_results(network, bits_stolen, subnetCount, calSubnetCount, subnets):
     """
     Prints results for subnets
+    :param network: Network Object
     :param bits_stolen: Number of bits stolen
-    :param subnetCount: Subnet Count
+    :param subnetCount: Original Subnet count
+    :param calSubnetCount: Subnet Count
     :param subnets: Created Subnets
     :return: None
     """
-    string = "\n"
-    string += "\nNumber of bits needed to be stolen: " + str(bits_stolen)
-    string += "\nNew Subnet Mask: " + str(subnets.__getitem__(0).subnet_mask)
-    string += "\nNumber of subnets created: " + str(subnetCount)
-    string += "\nTotal Number of usable hosts per subnet: " + str(subnets.__getitem__(0).usable_hosts)
-    string += "\n"
+    # Print Original network
+    print("{:<18} {:<18} {:<18} {:<38} {:<38}".format('Network Mask', 'Network Id',
+                                                      'Directed Broadcast', 'Range of addresses',
+                                                      'Possible Router Addresses'))
+    print("{:<18} {:<18} {:<18} {:<38} {:<38}"
+        .format(
+        network.mask.ip_string,
 
+        network.subnet.network_id.ip_string,
+
+        network.subnet.broadcast_address.ip_string,
+
+        network.subnet.network_id.ip_string + " - "
+        + network.subnet.broadcast_address.ip_string,
+
+        network.subnet.router_low_address.ip_string + ", "
+        + network.subnet.router_high_address.ip_string,
+    ))
+
+    print("\nFor " + str(subnetCount) + " subnets, " + str(bits_stolen)
+          + " bits will be stolen to create total of " + str(calSubnetCount) + " subnets")
+    print("New Subnet Mask will be " + str(subnets.__getitem__(0).subnet_mask.ip_string)
+          + " (Binary:" + subnets.__getitem__(0).subnet_mask.ip_binary_string + ")")
+    print("There will be " + str(subnets.__getitem__(0).usable_hosts) + " useable hosts per subnet")
+    print("\nCreated Subnets:")
+
+    print("{:<10} {:<38} {:<18} {:<18} {:<38} {:<38}".format('Subnet #', 'Network Range', 'Network Id',
+                                                             'Directed Broadcast', 'Range of Useable addresses',
+                                                             'Possible Router Addresses'))
     subnetsSize = len(subnets)
-
     for i in range(len(subnets)):
+        k = str(i + 1)
         if i + 1 == subnetsSize:
-            string += "\nLast Subnet:"
-        else:
-            string += "\nSubnet " + str(i + 1) + ":"
-        string += "\n" + str(subnets.__getitem__(i))
+            k = str(calSubnetCount)
 
-    print(string)
+        print("{:<10} {:<38} {:<18} {:<18} {:<38} {:<38}"
+            .format(
+            k,
+
+            subnets.__getitem__(i).network_id.ip_string + " - "
+            + subnets.__getitem__(i).broadcast_address.ip_string,
+
+            subnets.__getitem__(i).network_id.ip_string,
+
+            subnets.__getitem__(i).broadcast_address.ip_string,
+
+            subnets.__getitem__(i).router_low_address.ip_string + " - "
+            + subnets.__getitem__(i).router_high_address.ip_string,
+
+            subnets.__getitem__(i).router_low_address.ip_string + ", "
+            + subnets.__getitem__(i).router_high_address.ip_string
+        ))
+
+        print("{:<10} {:<38} {:<18} {:<18} {:<38} {:<38}"
+            .format(
+            "Binary",
+            subnets.__getitem__(i).network_id.ip_binary_string + " - ",
+            "",
+            "",
+            subnets.__getitem__(i).router_low_address.ip_binary_string + " - ",
+            ""
+        ))
+
+        print("{:<10} {:<38} {:<18} {:<18} {:<38} {:<38}"
+            .format(
+            "Addresses",
+            subnets.__getitem__(i).broadcast_address.ip_binary_string,
+            "",
+            "",
+            subnets.__getitem__(i).router_high_address.ip_binary_string,
+            ""
+        ))
+        print("\n")
 
 
 def main():
@@ -394,26 +460,20 @@ def main():
     :return: None
     """
     # User input
-    ip = get_ip_from_user()
+    (network, subnetCount) = get_user_input()
 
-    # Original network
-    network = Network(ip)
-    print(network)
-
-    # get user input about subnet count
-    subnetCount = get_subnet_count(network.subnet.host_bits)
     bits_stolen = (int(subnetCount) - 1).bit_length()
     if bits_stolen <= 0:
         print("No need to Subnet")
         sys.exit("Exiting!")
 
-    subnetCount = pow(2, bits_stolen)
+    calSubnetCount = pow(2, bits_stolen)
 
     # create subnets
-    subnets = create_subnets(subnetCount, network, 5)
+    subnets = create_subnets(calSubnetCount, network, 5)
 
-    # print results
-    print_subnet_results(bits_stolen, subnetCount, subnets)
+    # Print results
+    print_subnet_results(network, bits_stolen, subnetCount, calSubnetCount, subnets)
 
 
 if __name__ == '__main__':
